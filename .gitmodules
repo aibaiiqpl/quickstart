@@ -1,3 +1,9 @@
 [submodule "paseo"]
 	path = paseo
 	url = https://github.com/getpaseo/paseo
+[submodule "file-upload"]
+	path = file-upload
+	url = git@github.com:aibaiiqpl/file-upload.git
+[submodule "codewatt"]
+	path = codewatt
+	url = git@github.com:aibaiiqpl/codewatt.git
