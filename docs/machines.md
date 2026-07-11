@@ -21,11 +21,12 @@ ssh -p 6041 wudun@aiwatt.net
 
 ## OCI（共 3 台）
 
-| 别名     | 地址（账号@IP） | 备注                                                         |
-| -------- | --------------- | ------------------------------------------------------------ |
-| oci-base | ubuntu@(待补)   | 承载 base.codewatt.cn（基站储能模拟服务）、files.codewatt.cn（文件服务） |
+| 别名     | 地址                    | 备注                                                         |
+| -------- | ----------------------- | ------------------------------------------------------------ |
+| oci-base | ubuntu@159.54.175.64    | 承载 base.codewatt.cn（基站储能模拟服务）、files.codewatt.cn（文件服务） |
+| oci-arm  | ubuntu@170.9.53.38      | 承载官网（www.codewatt.cn、codewatt.cn）、paseo relay 服务（paseo.codewatt.cn、relay.codewatt.cn）、期权引擎服务（opt.codewatt.cn） |
 
-> 另有 2 台 OCI 机器待补充。
+> IP 通过域名解析得到。另有 1 台 OCI 机器待补充。
 
 ## 域名
 
@@ -34,3 +35,8 @@ ssh -p 6041 wudun@aiwatt.net
 | eco-watt.net     | AWS 生产机 | smart-energy 云服务生产域名     |
 | base.codewatt.cn | oci-base   | 基站储能模拟服务                |
 | files.codewatt.cn | oci-base  | 文件服务                        |
+| codewatt.cn      | oci-arm    | 官网                            |
+| www.codewatt.cn  | oci-arm    | 官网                            |
+| paseo.codewatt.cn | oci-arm   | paseo relay 服务                |
+| relay.codewatt.cn | oci-arm   | paseo relay 服务                |
+| opt.codewatt.cn  | oci-arm    | 期权引擎服务                    |
