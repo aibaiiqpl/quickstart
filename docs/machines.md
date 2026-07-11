@@ -25,7 +25,7 @@ ssh -p 6041 wudun@aiwatt.net
 | -------- | ----------------------- | ------------------------------------------------------------ |
 | oci-base | ubuntu@159.54.175.64    | 承载 base.codewatt.cn（基站储能模拟服务）、files.codewatt.cn（文件服务） |
 | oci-arm  | ubuntu@170.9.53.38      | 承载官网（www.codewatt.cn、codewatt.cn）、paseo relay 服务（paseo.codewatt.cn、relay.codewatt.cn）、期权引擎服务（opt.codewatt.cn） |
-| oci-amd  | (账号待确认)@163.192.16.235 | 承载 x.codewatt.cn、frps.codewatt.cn |
+| oci-amd  | ubuntu@163.192.16.235   | 承载 x.codewatt.cn、frps.codewatt.cn |
 
 > IP 通过域名解析得到。
 
