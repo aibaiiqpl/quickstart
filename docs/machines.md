@@ -14,7 +14,7 @@ ssh -p 6041 wudun@aiwatt.net
 
 | 别名/命令 | 地址                   | 备注                    |
 | --------- | ---------------------- | ----------------------- |
-| xmy-dev   | aiwatt@192.168.110.198 | 本机（hostname 已设为 xmy-dev），网卡 enp0s3 |
+| xmy-dev   | aiwatt@192.168.110.198 | 本机（hostname 为 dhfan-dev），网卡 enp0s3 |
 | frank-dev | frank@192.168.110.239  | 隔壁机器                |
 
 ## 其他
