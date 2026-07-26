@@ -7,3 +7,6 @@
 [submodule "codewatt"]
 	path = codewatt
 	url = git@github.com:aibaiiqpl/codewatt.git
+[submodule "paseo-relay"]
+	path = paseo-relay
+	url = https://github.com/zenghongtu/paseo-relay.git
