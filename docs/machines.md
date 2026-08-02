@@ -12,10 +12,40 @@ ssh -p 6041 wudun@aiwatt.net
 
 ## 内网开发机
 
-| 别名/命令 | 地址                   | 备注                    |
-| --------- | ---------------------- | ----------------------- |
-| xmy-dev   | aiwatt@192.168.110.198 | 本机（hostname 为 dhfan-dev），网卡 enp0s3 |
-| frank-dev | frank@192.168.110.239  | 隔壁机器                |
+内网开发机均为 VirtualBox 虚拟机，宿主机见下方「虚拟化宿主机」。地址由 DHCP 分配，**会漂移**，下表地址为 2026-08-02 实测值。
+
+| 别名/命令 | 地址                   | 宿主机上的虚机名 | 备注                    |
+| --------- | ---------------------- | ---------------- | ----------------------- |
+| xmy-dev   | aiwatt@192.168.110.200 | `xmy-dev`        | 本机（hostname 为 dhfan-dev），网卡 enp0s3 |
+| frank-dev | frank@192.168.110.239  | `frank-test`     | 隔壁机器                |
+
+## 虚拟化宿主机
+
+| 别名     | 地址               | 备注                                          |
+| -------- | ------------------ | --------------------------------------------- |
+| vbox-host | wudun@192.168.110.3 | VirtualBox 宿主机，承载 18 台开发虚机；根分区 901G，`~/VirtualBox VMs` 常年逼近写满 |
+
+### 内网机器 ping 不通时的排查顺序
+
+不要直接判定「机器关机了」。宿主机磁盘写满时，VirtualBox 会把虚机自动切到 `paused` 以防数据损坏，此时虚机 CPU 冻结、网卡不响应，表现与关机完全一致（ping 不通 + ARP FAILED + SSH 连接超时）。
+
+```bash
+ssh wudun@192.168.110.3
+VBoxManage list vms                                          # 虚机清单
+VBoxManage showvminfo <vm> --machinereadable | grep VMState  # paused?
+df -h /                                                      # 宿主机磁盘
+tail -30 ~/VirtualBox\ VMs/<vm>/Logs/VBox.log | grep -i disk_full
+```
+
+确认是 paused 后，**必须先在宿主机腾出空间再恢复**，否则虚机跑起来立刻会被再次挂起：
+
+```bash
+VBoxManage controlvm <vm> resume
+```
+
+恢复后进虚机确认文件系统没被踢成只读：`mount | grep " / "`（应为 `rw`）。
+
+> 找不到虚机新地址时，用 `known_hosts` 里的主机密钥反查：主机密钥存在虚机内部、跟着机器走，换 IP 也不变。`ssh-keygen -F <旧IP>` 取出密钥，再用 `ssh-keyscan` 扫全网段比对即可定位。
 
 ## 其他
 
