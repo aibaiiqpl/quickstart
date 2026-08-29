@@ -148,7 +148,10 @@ python3 -c 'import sqlite3;print(list(sqlite3.connect("/home/ubuntu/.codex/state
 | --- | --- | --- |
 | `base_url` | `https://llm-proxy-k3s6jf12sd78.zero-qa.com/v1` | `https://api.pulsarwave.net` |
 | 是否带 `/v1` | **带** | **不带**，codex 自己拼 |
-| 认证字段 | `wire_api = "responses"`<br>`supports_websockets = true` | `requires_openai_auth = true` |
+| 传输字段 | `wire_api = "responses"`<br>`supports_websockets = true` | 无 |
+| 认证字段 | `requires_openai_auth = true`（codex ≥ 0.150 必须） | `requires_openai_auth = true` |
+
+**cm 在不同 codex 版本上认证方式不同**（2026-08-29 实测）：0.146 会自动读 `auth.json`，不加 `requires_openai_auth` 也能跑；**0.150 起不再回落 `auth.json`**，不加就报 401 `API_KEY_REQUIRED`（codex 压根不送 key）。另一种解法是 `env_key = "OPENAI_API_KEY"` 配合 shell export 同名环境变量，但那样得改 `~/.zshrc`、非交互 shell 还拿不到，**优先用 `requires_openai_auth`**。
 
 ```toml
 # cm 变体
@@ -157,6 +160,7 @@ name = "CodexManager"
 base_url = "https://llm-proxy-k3s6jf12sd78.zero-qa.com/v1"
 wire_api = "responses"
 supports_websockets = true
+requires_openai_auth = true      # codex >= 0.150 必须
 
 # gateway 变体
 [model_providers.gateway]

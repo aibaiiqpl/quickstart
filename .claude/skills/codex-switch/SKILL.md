@@ -140,6 +140,7 @@ name = "CodexManager"
 base_url = "https://llm-proxy-k3s6jf12sd78.zero-qa.com/v1"
 wire_api = "responses"
 supports_websockets = true
+requires_openai_auth = true      # codex >= 0.150 必须加，见下
 
 # gateway
 model_provider = "gateway"
@@ -149,7 +150,16 @@ base_url = "https://api.pulsarwave.net"
 requires_openai_auth = true
 ```
 
-注意 cm 的 base_url **带 `/v1`**、gateway **不带**，认证字段也不同，别混用。
+注意 cm 的 base_url **带 `/v1`**、gateway **不带**，别混用。
+
+**cm 在不同 codex 版本上认证方式不同**（2026-08-29 实测）：
+
+| codex | cm 需要 `requires_openai_auth` | 不加的后果 |
+| --- | --- | --- |
+| 0.146（oci-arm） | 不需要，会自动读 auth.json | — |
+| 0.150（本机、隔壁机器） | **必须加** | 401 `API_KEY_REQUIRED`，codex 压根不送 key |
+
+0.150 对自定义 provider 不再回落 `auth.json`。除 `requires_openai_auth = true` 外，另一种解法是 `env_key = "OPENAI_API_KEY"` 配合 shell 里 export 同名环境变量，但那样得往 `~/.zshrc` 塞东西、且非交互 shell 拿不到，**优先用 `requires_openai_auth`**。
 
 **`[projects."..."]` 段是目录信任清单，记绝对路径，机器专属，绝不能跨机覆盖**（mac 有 26 个、本机 9 个、oci-arm 4 个）。同理 mac 上还有 plugins / mcp_servers / marketplaces / desktop / shell_environment_policy 等大段配置，**只做插入，绝不整文件覆盖**。
 
@@ -220,12 +230,16 @@ python3 -c "import sqlite3;print(list(sqlite3.connect('$HOME/.codex/state_5.sqli
 - 跨机传 key 走 ssh 管道，不落盘、不进 history。
 - 切走前必须备份当前 auth.json，否则该账号的 key 可能永久丢失。
 
-## 已知遗留问题
+## 只修 threads（不换账号）
 
-以下是历史切换中漏做第 4 步造成的，执行本 skill 时会被自动修好（`!=` 写法会收拢它们），也可单独修：
+若 config 和 key 本身都对、只是 threads 钉错了（历史切换漏做第 4 步的典型后果），不必走完整流程：**跳过 1/2/3 步，只跑第 4 步**，也不必停服务——sqlite WAL 支持并发，`timeout=30` 即可，遇锁再停。
 
-- **本机**：threads 里有 22 个钉在 `openai`（config 是 cm），会打到 api.openai.com
-- **隔壁机器**：threads 里有 4 个钉在 `cm`，而 config 已是 gateway、`[model_providers.cm]` 段已删除
+先用收尾检查确认是否存在这种情况：
+
+```bash
+python3 -c "import sqlite3;print(list(sqlite3.connect('$HOME/.codex/state_5.sqlite').execute('select model_provider,count(*) from threads group by model_provider')))"
+# 出现多个 provider，或出现 config 里已不存在的 provider id，即为钉错
+```
 
 ## 回退
 
