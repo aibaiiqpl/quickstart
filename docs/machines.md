@@ -38,6 +38,20 @@ network:
 
 > 加挂第二地址是**纯追加**操作：改 netplan 时必须把原有地址一起列出（netplan 对同一网卡的 `addresses` 是**整键覆盖**，高编号文件会替换而不是追加，漏写原地址会直接断网）。改完先 `netplan generate` 校验、`ip addr add` 运行时验证，再 `netplan apply`。
 
+## 内网物理机
+
+不挂在 VirtualBox 宿主机上的内网机器，地址同样由 DHCP 分配、**会漂移**。
+
+| 别名      | 地址                    | 备注                    |
+| --------- | ----------------------- | ----------------------- |
+| frank-mac | frankfan@192.168.110.26 | Frank 的 MacBook Air（hostname `FrankdeMacBook-Air.local`，Apple Silicon）。**只能密码登录**，未配公钥，密码不入库 |
+
+关于这台机器上的 codex / paseo，有几处与 Linux 开发机不同：
+
+- **paseo 是桌面 App**（`/Applications/Paseo.app`，进程为 Paseo Supervisor → Paseo Daemon），**没有 systemd/launchd 服务**，不能 `systemctl restart`，只能手动重启 App。
+- **`codex` 不在 PATH**。App 自带的 CLI 在 `/Applications/ChatGPT.app/Contents/Resources/codex`；给 paseo 跑 app-server 的是另一份 nvm 装的 `@openai/codex`。
+- 站点 VPN 走 macOS 专用的一套（`/usr/local/libexec/aiwatt-pptp/pptp-wrapper.sh` + `/usr/local/bin/pptp-codex`），由 codex 托管；`pppd` 会 reparent 到 launchd，所以杀 codex 进程不会断掉隧道。
+
 ## 虚拟化宿主机
 
 | 别名     | 地址               | 备注                                          |
