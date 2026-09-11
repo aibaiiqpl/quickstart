@@ -6,6 +6,13 @@
 #   装置時刻を意図的に（年月日を含めて）誤った値に設定し、NTP による時刻同期が
 #   自動的に完了することと、その所要時間・同期後残差を客観的に実測・記録する。
 #
+# 同期先について:
+#   出力制御機能付 PCS 等の時刻同期先は、スケジュールサーバ（電力サーバまたは配信
+#   事業者サーバ）が提供する NTP サーバ機能である（東北電力ネットワーク 出力制御機能付
+#   ＰＣＳ等 技術仕様書（高低圧）6.3 および 7.8）。実際の試験では第 1 引数に模擬
+#   スケジュールサーバーのアドレスを指定する。既定値の ntp.nict.jp は日本標準時の
+#   公開サーバで、スクリプト自体の動作確認用。
+#
 # 依存:
 #   - bash, awk, date, logger, /proc/uptime
 #   - 同期機構のいずれか: chrony(chronyc) / systemd-timesyncd / ntpdate / busybox ntpd
@@ -24,7 +31,10 @@
 #
 # 使い方:
 #   sudo ./test_time_sync.sh [NTP_SERVER] ["FAKE_TIME"] [LIMIT_SECONDS]
-#   例: sudo ./test_time_sync.sh re-ene-time.hepco.co.jp "2025-03-19 09:00:00" 60
+#   例: sudo ./test_time_sync.sh 192.0.2.10 "2024-11-05 03:27:11" 60
+#   NTP_SERVER    : 同期先（模擬スケジュールサーバー等）。既定 ntp.nict.jp
+#   FAKE_TIME     : 誤設定する時刻。年月日も現在時刻と異なる値にすること
+#   LIMIT_SECONDS : 技術仕様書に規定した同期所要時間の上限［秒］
 #
 # 環境変数:
 #   FORCE_METHOD=auto|chrony|timesyncd|ntpdate|busybox   同期機構を強制指定
@@ -35,8 +45,8 @@
 #
 set -euo pipefail
 
-SERVER="${1:-re-ene-time.hepco.co.jp}"
-FAKE_TIME="${2:-2025-03-19 09:00:00}"
+SERVER="${1:-ntp.nict.jp}"
+FAKE_TIME="${2:-2024-11-05 03:27:11}"
 LIMIT_SECONDS="${3:-}"
 
 FORCE_METHOD="${FORCE_METHOD:-auto}"
@@ -157,8 +167,9 @@ sntp_probe() {
 # resolve_reachable_server: 主機名の全 A レコードを順に SNTP 探査し、応答した最初の IP を採用する。
 # 入力: $1 = ホスト名または IP
 # 出力: 採用した IP。副作用: 到達性の検査結果を syslog に残す（不到達アドレスも証跡として残す）。
-# 注意: re-ene-time.hepco.co.jp は複数 A レコードを持ち、一部が無応答の実例がある。
-#       先頭 1 件だけを見ると到達可能なサーバがあるのに FAIL と誤判定する。
+# 注意: 時刻サーバは複数 A レコードを持つことがあり、一部が無応答の実例がある
+#       （re-ene-time.hepco.co.jp の 61.198.17.146 で実測）。先頭 1 件だけを見ると
+#       到達可能なサーバがあるのに FAIL と誤判定する。
 resolve_reachable_server() {
     local host="$1" addrs="" ip="" probe=""
     addrs="$(getent ahostsv4 "$host" 2>/dev/null | awk '{print $1}' | sort -u)"
