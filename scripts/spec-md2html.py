@@ -4,7 +4,7 @@ import io, re, sys, html
 
 src = io.open(sys.argv[1], encoding='utf-8').read()
 # 作業用の見出し・注記（先頭の H1 とその直後の引用）は提出物に含めない
-i = src.index('## 全量買取用出力制御装置 技術仕様書')
+i = src.index('## 出力制御装置技術仕様書')
 lines = src[i:].split('\n')
 
 def inline(t):
@@ -88,6 +88,6 @@ table.info td:first-child { background: #f2f2f2; width: 38%; font-weight: bold; 
 """
 io.open(sys.argv[2], 'w', encoding='utf-8').write(
     '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8">'
-    '<title>全量買取用出力制御装置 技術仕様書</title><style>%s</style></head><body>%s</body></html>'
+    '<title>出力制御装置技術仕様書</title><style>%s</style></head><body>%s</body></html>'
     % (CSS, '\n'.join(out)))
 print('html ok')

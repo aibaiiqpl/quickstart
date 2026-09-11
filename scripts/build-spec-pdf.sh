@@ -38,7 +38,7 @@ python3 scripts/spec-md2html.py "$SRC" "$HTML"
 "$WK" --quiet --enable-local-file-access --encoding utf-8 \
     --page-size A4 --margin-top 20mm --margin-bottom 20mm --margin-left 18mm --margin-right 18mm \
     --footer-font-name "IPAPGothic" --footer-font-size 7 --footer-spacing 7 --footer-line \
-    --footer-left "全量買取用出力制御装置 技術仕様書  Ver. 1.00" \
+    --footer-left "出力制御装置技術仕様書  Ver. 1.00" \
     --footer-right "- [page] / [topage] -" \
     "$HTML" "$OUT"
 
