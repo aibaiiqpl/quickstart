@@ -69,7 +69,7 @@ model_provider = "gateway"
 model_reasoning_effort = "xhigh"
 
 [model_providers.gateway]
-# 具体字段见下方「Provider 配置变体」
+# 具体字段见下方「Provider 配置」
 
 [projects."/home/ubuntu"]
 trust_level = "trusted"
@@ -78,7 +78,7 @@ trust_level = "trusted"
 
 两个坑：
 
-- **provider id 不能叫 `openai`**。codex 会拒绝启动：`reserved built-in provider IDs: openai. Built-in providers cannot be overridden`。叫 `cm`、`gateway` 都行。
+- **provider id 不能叫 `openai`**。codex 会拒绝启动：`reserved built-in provider IDs: openai. Built-in providers cannot be overridden`。用 `gateway` 这类自定义 id。
 - **`OPENAI_BASE_URL` 环境变量没用**，codex 不认，必须写进 config.toml。
 
 `[projects]` 是**目录信任清单**，记的是绝对路径，天生机器专属。跨机器 copy config.toml 会把这段一起换掉，导致本机目录丢失 trusted 状态、每次跑都弹确认。跨机迁移时只迁 provider 段，projects 段保留本机的。
@@ -140,34 +140,16 @@ python3 -c 'import sqlite3;print(list(sqlite3.connect("/home/ubuntu/.codex/state
 # 期望只有一个 provider
 ```
 
-## Provider 配置变体
-
-两套都在 oci-arm 上验证过，字段结构不同，别混用：
-
-| | `cm`（CodexManager） | `gateway`（API Gateway） |
-| --- | --- | --- |
-| `base_url` | `https://llm-proxy-k3s6jf12sd78.zero-qa.com/v1` | `https://api.pulsarwave.net` |
-| 是否带 `/v1` | **带** | **不带**，codex 自己拼 |
-| 传输字段 | `wire_api = "responses"`<br>`supports_websockets = true` | 无 |
-| 认证字段 | `requires_openai_auth = true`（codex ≥ 0.150 必须） | `requires_openai_auth = true` |
-
-**cm 在不同 codex 版本上认证方式不同**（2026-08-29 实测）：0.146 会自动读 `auth.json`，不加 `requires_openai_auth` 也能跑；**0.150 起不再回落 `auth.json`**，不加就报 401 `API_KEY_REQUIRED`（codex 压根不送 key）。另一种解法是 `env_key = "OPENAI_API_KEY"` 配合 shell export 同名环境变量，但那样得改 `~/.zshrc`、非交互 shell 还拿不到，**优先用 `requires_openai_auth`**。
+## Provider 配置
 
 ```toml
-# cm 变体
-[model_providers.cm]
-name = "CodexManager"
-base_url = "https://llm-proxy-k3s6jf12sd78.zero-qa.com/v1"
-wire_api = "responses"
-supports_websockets = true
-requires_openai_auth = true      # codex >= 0.150 必须
-
-# gateway 变体
 [model_providers.gateway]
 name = "API Gateway"
-base_url = "https://api.pulsarwave.net"
-requires_openai_auth = true
+base_url = "https://api.pulsarwave.net"   # 不带 /v1，codex 自己拼
+requires_openai_auth = true               # codex >= 0.150 必须
 ```
+
+**codex 0.150 起自定义 provider 不再回落 `auth.json`**（2026-08-29 实测），不加 `requires_openai_auth` 就报 401 `API_KEY_REQUIRED`（codex 压根不送 key）。另一种解法是 `env_key = "OPENAI_API_KEY"` 配合 shell export 同名环境变量，但那样得改 `~/.zshrc`、非交互 shell 还拿不到，**优先用 `requires_openai_auth`**。
 
 ## 返回码怎么读
 

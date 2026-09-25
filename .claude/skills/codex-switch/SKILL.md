@@ -1,6 +1,6 @@
 ---
 name: codex-switch
-description: 在指定机器上切换 codex 的账号/provider（cm、gateway、原生 ChatGPT 登录）。当用户说「把某台机器的 codex 切成 X」「换成 cm 那套 / gateway 那套 / 原生登录」「codex 换 apikey」时使用。支持本机、隔壁机器、oci-arm、mac 四台。
+description: 在指定机器上切换 codex 的账号/provider（gateway、原生 ChatGPT 登录）。当用户说「把某台机器的 codex 切成 X」「换成 gateway 那套 / 原生登录」「codex 换 apikey」时使用。支持本机、隔壁机器、oci-arm、mac 四台。
 ---
 
 # codex 切换账号
@@ -10,7 +10,9 @@ description: 在指定机器上切换 codex 的账号/provider（cm、gateway、
 ## 参数
 
 **机器**：`本机` | `隔壁机器` | `oci-arm` | `mac`
-**账号**：`cm` | `gateway` | `原生`（ChatGPT OAuth）
+**账号**：`gateway` | `原生`（ChatGPT OAuth）
+
+> cm（CodexManager，`zero-qa.com`）已于 2026-09-26 弃用，三台机器上的 key、配置和备份已全部删除。用户再提 cm，告知已弃用，不要复原。
 
 两者缺一就问用户，不要猜。
 
@@ -33,22 +35,11 @@ description: 在指定机器上切换 codex 的账号/provider（cm、gateway、
 
 | 账号 | provider id | base_url | key 指纹 | 长度 |
 | --- | --- | --- | --- | --- |
-| cm（本机专用） | `cm` | `https://llm-proxy-k3s6jf12sd78.zero-qa.com/v1` | `c3ac3c6d511e` | 67 |
-| cm（其余机器） | `cm` | 同上 | `8034de371f9c` | 12 |
 | gateway | `gateway` | `https://api.pulsarwave.net` | `31631675602d` | 164 |
-
-**cm 有两把不同的 key，按机器分配**（用户已确认：每台机器用自己历史上那把）：
-
-| 目标机器 | 切 cm 用哪把 | 从哪取 |
-| --- | --- | --- |
-| 本机 | `c3ac3c6d511e`（67） | 本机当前 `~/.codex/auth.json`（**仅此一处，切走前必须备份**） |
-| 隔壁机器 | `8034de371f9c`（12） | oci-arm `~/.codex/auth.json.apikey.bak.20260811` |
-| oci-arm | `8034de371f9c`（12） | oci-arm `~/.codex/auth.json.apikey.bak.20260811` |
-| mac | 无历史记录 | 停下来问用户 |
 
 切 gateway 一律用 `31631675602d`，可从隔壁机器当前 `auth.json` 或 oci-arm `auth.json.gateway.bak.20260828` 取。
 
-> **本机和隔壁机器没有任何 auth.json 备份**。本机那把 67 字符 cm key 只存在于当前 auth.json 一处，切走而不备份就永久丢失。第 0 步的备份对这两台是硬要求。
+> gateway 背后是 ChatGPT 账号池：OpenAI 侧 Codex 故障时它的 `/v1/models` 仍返回 200，`/responses` 却报 401 `upstream_authentication_failed`，这不是 key 或配置的问题（2026-09-26 实测）。
 
 取 key 后**先验证再写入**：
 
@@ -138,33 +129,14 @@ ssh <源机> 'python3 -c "..."' | ssh <目标机> 'codex login --with-api-key'
 **只改 provider 相关的三处，其余原样保留**：顶层 `model_provider`，`[model_providers.*]` 段，以及本机原有的 `model_reasoning_effort`（本机/oci-arm 是 `xhigh`，mac 是 `high`，别互相污染）。
 
 ```toml
-# cm
-model_provider = "cm"
-[model_providers.cm]
-name = "CodexManager"
-base_url = "https://llm-proxy-k3s6jf12sd78.zero-qa.com/v1"
-wire_api = "responses"
-supports_websockets = true
-requires_openai_auth = true      # codex >= 0.150 必须加，见下
-
-# gateway
 model_provider = "gateway"
 [model_providers.gateway]
 name = "API Gateway"
-base_url = "https://api.pulsarwave.net"
-requires_openai_auth = true
+base_url = "https://api.pulsarwave.net"   # 不带 /v1，codex 自己拼
+requires_openai_auth = true               # codex >= 0.150 必须加，见下
 ```
 
-注意 cm 的 base_url **带 `/v1`**、gateway **不带**，别混用。
-
-**cm 在不同 codex 版本上认证方式不同**（2026-08-29 实测）：
-
-| codex | cm 需要 `requires_openai_auth` | 不加的后果 |
-| --- | --- | --- |
-| 0.146 | 不需要，会自动读 auth.json | — |
-| ≥ 0.150（本机、隔壁机器、oci-arm） | **必须加** | 401 `API_KEY_REQUIRED`，codex 压根不送 key |
-
-0.150 对自定义 provider 不再回落 `auth.json`。除 `requires_openai_auth = true` 外，另一种解法是 `env_key = "OPENAI_API_KEY"` 配合 shell 里 export 同名环境变量，但那样得往 `~/.zshrc` 塞东西、且非交互 shell 拿不到，**优先用 `requires_openai_auth`**。
+**codex ≥ 0.150 对自定义 provider 不再回落 `auth.json`**（2026-08-29 实测），不加 `requires_openai_auth = true` 就报 401 `API_KEY_REQUIRED`（codex 压根不送 key）。另一种解法是 `env_key = "OPENAI_API_KEY"` 配合 shell 里 export 同名环境变量，但那样得往 `~/.zshrc` 塞东西、且非交互 shell 拿不到，**优先用 `requires_openai_auth`**。
 
 **`[projects."..."]` 段是目录信任清单，记绝对路径，机器专属，绝不能跨机覆盖**（mac 有 26 个、本机 9 个、oci-arm 4 个）。同理 mac 上还有 plugins / mcp_servers / marketplaces / desktop / shell_environment_policy 等大段配置，**只做插入，绝不整文件覆盖**。
 
@@ -177,7 +149,7 @@ codex 把每个 thread 的 provider 钉死在 `state_*.sqlite` 的 `threads` 表
 ```bash
 python3 - <<'EOF'
 import sqlite3
-src="<HOME>/.codex/state_5.sqlite"; target="cm"   # 改成目标 provider id
+src="<HOME>/.codex/state_5.sqlite"; target="gateway"   # 改成目标 provider id（原生登录用 openai）
 con=sqlite3.connect(src, timeout=30)
 b=sqlite3.connect(src+".bak.manual"); con.backup(b); b.close()
 print("before:", list(con.execute("select model_provider,count(*) from threads group by model_provider")))
