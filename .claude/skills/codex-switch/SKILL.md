@@ -20,7 +20,7 @@ description: 在指定机器上切换 codex 的账号/provider（cm、gateway、
 | --- | --- | --- | --- | --- |
 | 本机 | 本地 `frank@frank-dev` | Linux | `~/.nvm/versions/node/v26.2.0/bin/codex` 0.150.1 | `paseo.service` |
 | 隔壁机器 | `ssh aiwatt@192.168.1.190` | Ubuntu 24.04 | 同上路径（另有 `/usr/local/bin/codex` 软链） | `paseo.service` |
-| oci-arm | `ssh ubuntu@170.9.53.38` | Ubuntu arm64 | `~/.npm-global/bin/codex` 0.146.1 | `paseo-daemon.service` + `paseo-relay.service` |
+| oci-arm | `ssh ubuntu@170.9.53.38` | Ubuntu arm64 | `~/.npm-global/bin/codex` 0.156.1（2026-09-25） | `paseo-daemon.service` + `paseo-relay.service` |
 | mac | `SSHPASS=dhfan sshpass -e ssh frankfan@192.168.110.25` | macOS 13.5.1 arm64 | `~/.nvm/versions/node/v24.15.0/bin/codex` 0.147.0 | **无 systemd**，是 `/Applications/Paseo.app` |
 
 四台的 state 文件都是 `~/.codex/state_5.sqlite`（**编号会随 codex 升级跳，先 `ls ~/.codex/state_*.sqlite` 确认**）。
@@ -68,17 +68,22 @@ print('len=%d %s'%(len(k),hashlib.sha256(k.encode()).hexdigest()[:12]))" <auth.j
 
 ## 原生登录（`原生`）
 
-codex 的 OAuth 登录**需要浏览器交互，远程机器做不了**。唯一可行路径是还原该机的 OAuth 备份：
+**首选设备码登录**（codex ≥ 0.156 有 `codex login --device-auth`，远程无头机器可用，2026-09-25 在 oci-arm 实测通过）。先在隔离的临时 CODEX_HOME 里登录并验证，成功后再装进 `~/.codex`，登录失败不影响线上：
 
-| 机器 | 可用备份 |
-| --- | --- |
-| oci-arm | `auth.json.chatgpt.bak.20260806` / `.20260811` / `.20260821` |
-| mac | `auth.json.chatgpt.bak.20260827` / `.20260821` |
-| 本机、隔壁机器 | **无**，只能让用户在该机本地交互跑 `codex login` |
+```bash
+export PATH=<该机 codex 所在 bin>:$PATH
+T=$HOME/.codex-devauth-tmp; rm -rf $T; mkdir -m 700 $T      # 别放 /tmp，codex 会告警
+printf 'model = "gpt-5.6-sol"\n' > $T/config.toml
+CODEX_HOME=$T setsid nohup codex login --device-auth > $T/login.log 2>&1 < /dev/null &
+sleep 8; sed -e 's/\x1b\[[0-9;]*m//g' $T/login.log   # 取出网址和一次性码（15 分钟有效）交给用户
+# 用户在自己浏览器打开 https://auth.openai.com/codex/device 输码授权后：
+CODEX_HOME=$T codex login status                           # 期望 Logged in using ChatGPT
+cd /tmp && CODEX_HOME=$T codex exec --skip-git-repo-check "reply with exactly: PONG"
+```
 
-还原后 config.toml 要去掉 `model_provider` 和 `[model_providers.*]` 段（回落内置 openai），threads 反向重钉成 `openai`。
+验证通过后走下面执行流程：第 2 步改为 `install -m 600 $T/auth.json ~/.codex/auth.json`；第 3 步只删 `model_provider` 行和 `[model_providers.*]` 段（回落内置 openai）；第 4 步 target 用 `openai`。收尾删掉 `$T`（里面有 token）。
 
-OAuth 的 access_token 短期有效，codex 会自动用 refresh_token 续签；若 refresh_token 已被撤销则还原失败，只能交互重登。
+**OAuth 备份基本不可用**：refresh_token 每次续签都会轮换，旧备份里的会被服务端作废。2026-09-25 实测 oci-arm 的 `auth.json.chatgpt.bak.20260806/.20260811/.20260821` 全部 `invalid_refresh_token`。若想试备份，也只在临时 CODEX_HOME 里跑一次 `codex exec` 验证，别直接还原到线上。
 
 ## 执行流程
 
@@ -156,8 +161,8 @@ requires_openai_auth = true
 
 | codex | cm 需要 `requires_openai_auth` | 不加的后果 |
 | --- | --- | --- |
-| 0.146（oci-arm） | 不需要，会自动读 auth.json | — |
-| 0.150（本机、隔壁机器） | **必须加** | 401 `API_KEY_REQUIRED`，codex 压根不送 key |
+| 0.146 | 不需要，会自动读 auth.json | — |
+| ≥ 0.150（本机、隔壁机器、oci-arm） | **必须加** | 401 `API_KEY_REQUIRED`，codex 压根不送 key |
 
 0.150 对自定义 provider 不再回落 `auth.json`。除 `requires_openai_auth = true` 外，另一种解法是 `env_key = "OPENAI_API_KEY"` 配合 shell 里 export 同名环境变量，但那样得往 `~/.zshrc` 塞东西、且非交互 shell 拿不到，**优先用 `requires_openai_auth`**。
 

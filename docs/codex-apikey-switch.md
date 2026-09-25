@@ -181,7 +181,7 @@ requires_openai_auth = true
 
 完全对称的操作：
 
-1. `codex login`（或还原 `auth.json.chatgpt.bak.*`）
+1. `codex login --device-auth`（远程无头机器可用；旧 `auth.json.chatgpt.bak.*` 的 refresh_token 会因轮换失效，基本还原不了。详见 `.claude/skills/codex-switch/SKILL.md`）
 2. config.toml 换成不带 `model_provider` 的那份
 3. 第 4 步反向：`update threads set model_provider='openai'`
 4. 重启 daemon
