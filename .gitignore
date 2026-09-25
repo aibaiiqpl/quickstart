@@ -36,6 +36,7 @@ $RECYCLE.BIN/
 # Logs & temp
 *.log
 *.tmp
+/tmp/
 
 # Node.js
 node_modules/
