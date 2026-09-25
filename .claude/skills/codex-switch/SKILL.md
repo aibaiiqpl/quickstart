@@ -83,7 +83,7 @@ cd /tmp && CODEX_HOME=$T codex exec --skip-git-repo-check "reply with exactly: P
 
 验证通过后走下面执行流程：第 2 步改为 `install -m 600 $T/auth.json ~/.codex/auth.json`；第 3 步只删 `model_provider` 行和 `[model_providers.*]` 段（回落内置 openai）；第 4 步 target 用 `openai`。收尾删掉 `$T`（里面有 token）。
 
-**OAuth 备份基本不可用**：refresh_token 每次续签都会轮换，旧备份里的会被服务端作废。2026-09-25 实测 oci-arm 的 `auth.json.chatgpt.bak.20260806/.20260811/.20260821` 全部 `invalid_refresh_token`。若想试备份，也只在临时 CODEX_HOME 里跑一次 `codex exec` 验证，别直接还原到线上。
+**OAuth 备份基本不可用**：refresh_token 每次续签都会轮换，旧备份里的会被服务端作废。2026-09-25 实测 oci-arm 的 `auth.json.chatgpt.bak.20260806/.20260811/.20260821` 全部 `invalid_refresh_token`，已删除。若想试备份，也只在临时 CODEX_HOME 里跑一次 `codex exec` 验证，别直接还原到线上。
 
 ## 执行流程
 
