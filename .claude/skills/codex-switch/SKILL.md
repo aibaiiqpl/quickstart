@@ -107,6 +107,8 @@ app-server 把凭据读进内存常驻，不杀就还是旧凭据。**它在 OAu
 
 **停服务会中断 paseo 上正在跑的会话**，动手前告知用户。
 
+**先查自己是不是跑在该 paseo 里**：`ps -o unit= -p $$` 输出 `paseo.service`（或 `paseo-daemon.service`）就是，此时 `systemctl stop` 会把当前 agent 会话连同 shell 一起 SIGKILL（exit 137，2026-09-26 本机实测），命令执行到一半就断。这种情况**不停服务**：先做完第 2 步写入凭据（`install` 原子替换），再 `pkill -f "codex[ ]app-server"`，paseo 按需重新拉起的 app-server 读到的就是新凭据；随后核对 auth.json 的 sha 没被回写。第 4 步改 threads 则按「只修 threads」那样带 `timeout=30` 在线改。
+
 ### 2. 写入 key
 
 ```bash
