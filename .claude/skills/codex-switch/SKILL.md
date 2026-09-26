@@ -20,7 +20,7 @@ description: 在指定机器上切换 codex 的账号/provider（cm、gateway、
 | --- | --- | --- | --- | --- |
 | 本机 | 本地 `frank@frank-dev` | Linux | `~/.nvm/versions/node/v26.2.0/bin/codex` 0.150.1 | `paseo.service` |
 | 隔壁机器 | `ssh aiwatt@192.168.1.190` | Ubuntu 24.04 | 同上路径（另有 `/usr/local/bin/codex` 软链） | `paseo.service` |
-| oci-arm | `ssh ubuntu@170.9.53.38` | Ubuntu arm64 | `~/.npm-global/bin/codex` 0.156.1（2026-09-25） | `paseo-daemon.service` + `paseo-relay.service` |
+| oci-arm | `ssh ubuntu@170.9.53.38` | Ubuntu arm64 | `~/.npm-global/bin/codex` 0.157.0（2026-09-26） | `paseo-daemon.service` + `paseo-relay.service` |
 | mac | `SSHPASS=dhfan sshpass -e ssh frankfan@192.168.110.25` | macOS 13.5.1 arm64 | `~/.nvm/versions/node/v24.15.0/bin/codex` 0.147.0 | **无 systemd**，是 `/Applications/Paseo.app` |
 
 四台的 state 文件都是 `~/.codex/state_5.sqlite`（**编号会随 codex 升级跳，先 `ls ~/.codex/state_*.sqlite` 确认**）。
@@ -83,11 +83,13 @@ cd /tmp && CODEX_HOME=$T codex exec --skip-git-repo-check "reply with exactly: P
 
 验证通过后走下面执行流程：第 2 步改为 `install -m 600 $T/auth.json ~/.codex/auth.json`；第 3 步只删 `model_provider` 行和 `[model_providers.*]` 段（回落内置 openai）；第 4 步 target 用 `openai`。收尾删掉 `$T`（里面有 token）。
 
-**OAuth 备份基本不可用**：refresh_token 每次续签都会轮换，旧备份里的会被服务端作废。2026-09-25 实测 oci-arm 的 `auth.json.chatgpt.bak.20260806/.20260811/.20260821` 全部 `invalid_refresh_token`，已删除。若想试备份，也只在临时 CODEX_HOME 里跑一次 `codex exec` 验证，别直接还原到线上。
+**原生 → 原生强制重登**（当前已是 `Logged in using ChatGPT`，只换凭据）：config 无 provider、threads 已全钉 `openai`，所以**跳过第 0、3、4 步**，只做第 1 步 → `install -m 600 $T/auth.json ~/.codex/auth.json` → 第 5 步。2026-09-26 在 oci-arm 实测。
+
+**OAuth 凭据不备份**：refresh_token 每次续签都会轮换，旧备份必然被服务端作废（2026-09-25 实测 oci-arm 三份 `auth.json.chatgpt.bak.*` 全部 `invalid_refresh_token`），备份毫无回退价值、还多留一份 token。当前是原生登录时第 0 步不备份 `auth.json`；登录坏了的补救永远是重新 device-auth。
 
 ## 执行流程
 
-### 0. 备份（硬要求，别省）
+### 0. 备份（apikey 账号硬要求，别省；当前为原生登录时不备份 auth.json，原生→原生重登整步跳过）
 
 ```bash
 cd ~/.codex && D=$(date +%Y%m%d)
@@ -233,7 +235,7 @@ python3 -c "import sqlite3;print(list(sqlite3.connect('$HOME/.codex/state_5.sqli
 - **脱敏必须递归处理嵌套字典**。OAuth 的 auth.json 把 token 放在 `tokens` 子字典里，只做顶层 `{k: len(v)}` 会把 id_token / access_token / **refresh_token 整个明文打印出来**（已发生过一次事故）。
 - 只打印长度和 sha256 前 12 位，永不打印 key/token 明文。
 - 跨机传 key 走 ssh 管道，不落盘、不进 history。
-- 切走前必须备份当前 auth.json，否则该账号的 key 可能永久丢失。
+- 当前是 apikey 账号时，切走前必须备份 auth.json，否则该 key 可能永久丢失；OAuth 凭据不备份（见「原生登录」）。
 
 ## 只修 threads（不换账号）
 
