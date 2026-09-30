@@ -27,7 +27,7 @@ description: 列出或切换本机/隔壁机器登录过的 Tailscale tailnet（
 
 | ID | Tailnet |
 | --- | --- |
-| 030f | fukuken@126.com |
+| 030f | fukuken@126.com（MagicDNS `tail64b94c.ts.net`，本机 IP 100.84.200.73） |
 | 828c | einfraems@outlook.com（默认，公司主网，MagicDNS `tail0effcf.ts.net`） |
 | 14db | hj.vpn@outlook.com |
 | 803b | qnvpn@outlook.com（MagicDNS `taildbd071.ts.net`，本机 IP 100.74.65.34） |
@@ -81,6 +81,8 @@ tailscale ping -c 3 --timeout 5s <任一在线节点IP>   # 期望收到 pong
 ```
 
 以下几点都满足才算切换成功：`BackendState` 是 `Running`，`Tailnet` 是目标网，`ping` 能收到 pong。
+
+如果只能走 DERP 中继、建不起直连，`tailscale ping` 会打印 `direct connection not established` 并返回 exit 1。这种情况只要收到了 pong 就算通，不是切换失败。
 
 `BackendState` 如果是 `NeedsLogin`，说明这个 profile 的登录已过期。`sudo tailscale up` 会给出一个登录网址，把网址交给用户，让用户在浏览器里授权，不要自己想办法绕过。
 
