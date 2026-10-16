@@ -1,5 +1,7 @@
 # 机器清单
 
+> 本文只记开发与云端基础设施，不含密码。项目现场设备、部署目标的架构/glibc/服务清单，以及所有登录密码，统一在本机设备台账 `~/.secrets/machines/<project>.json`（`$device-access` Skill）。
+
 ## 跳板机
 
 ```bash
@@ -44,7 +46,7 @@ network:
 
 | 别名      | 地址                    | 备注                    |
 | --------- | ----------------------- | ----------------------- |
-| frank-mac | frankfan@192.168.110.26 | Frank 的 MacBook Air（hostname `FrankdeMacBook-Air.local`，Apple Silicon）。**只能密码登录**，未配公钥，密码不入库 |
+| frank-mac | frankfan@192.168.110.26 | Frank 的 MacBook Air（hostname `FrankdeMacBook-Air.local`，Apple Silicon）。**只能密码登录**，未配公钥，密码不入库（见本机设备台账 `~/.secrets/machines/office.json`） |
 
 关于这台机器上的 codex / paseo，有几处与 Linux 开发机不同：
 
