@@ -12,10 +12,14 @@ ssh -p 6041 wudun@aiwatt.net
 
 ## 内网开发机
 
-| 别名/命令 | 地址                   | 备注                    |
+本仓库在两台开发机上都有 checkout，"本机/隔壁机器"随所在机器而变，这里一律用 hostname 标注。
+
+| hostname  | 地址                   | 备注                    |
 | --------- | ---------------------- | ----------------------- |
-| xmy-dev   | aiwatt@192.168.110.198 | 本机（hostname 为 dhfan-dev），网卡 enp0s3 |
-| frank-dev | frank@192.168.110.239  | 隔壁机器                |
+| frank-dev | frank@192.168.110.239  | frank 的主开发机；常驻 pptp vpn10 |
+| dhfan-dev | aiwatt@192.168.1.190   | 用 1.190 这个稳定地址（另有 192.168.110.200；旧记录 192.168.110.198 不可达）；常驻 pptp vpn15 |
+
+> 现场设备、跳板、tailnet 登录方式不入本仓库（公开仓库），见私有台账 `~/.secrets/devices/` 与 skill `device-ledger`。
 
 ## 其他
 
