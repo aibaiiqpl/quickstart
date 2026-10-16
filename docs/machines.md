@@ -19,7 +19,7 @@ ssh -p 6041 wudun@aiwatt.net
 | frank-dev | frank@192.168.110.239  | frank 的主开发机；常驻 pptp vpn10 |
 | dhfan-dev | aiwatt@192.168.1.190   | 用 1.190 这个稳定地址（另有 192.168.110.200；旧记录 192.168.110.198 不可达）；常驻 pptp vpn15 |
 
-> 现场设备、跳板、tailnet 登录方式不入本仓库（公开仓库），见私有台账 `~/.secrets/devices/` 与 skill `device-ledger`。
+> 现场设备、跳板、tailnet 登录方式不入本仓库（公开仓库），用 `~/.ssh/config.d/machines.conf` 里的别名登录，台账在 `~/.local/share/machines/`，见 skill `device-ledger`。
 
 ## 其他
 
