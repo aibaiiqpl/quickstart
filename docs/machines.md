@@ -104,6 +104,7 @@ VBoxManage controlvm <vm> resume
 | 域名             | 指向       | 备注                            |
 | ---------------- | ---------- | ------------------------------- |
 | eco-watt.net     | AWS 生产机 | smart-energy 云服务生产域名     |
+| file.eco-watt.net | AWS 测试机（经 ELB） | 文件服务，nginx root `/home/files`；`tmp/<类别>/` 为临时部署中转，`ota/` 为正式 OTA |
 | base.codewatt.cn | oci-base   | 基站储能模拟服务                |
 | files.codewatt.cn | oci-base  | 文件服务                        |
 | codewatt.cn      | oci-arm    | 官网                            |
