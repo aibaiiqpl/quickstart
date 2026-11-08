@@ -96,10 +96,19 @@ VBoxManage controlvm <vm> resume
 | 别名     | 地址                    | 备注                                                         |
 | -------- | ----------------------- | ------------------------------------------------------------ |
 | oci-base | ubuntu@159.54.175.64    | 承载 base.codewatt.cn（基站储能模拟服务）、files.codewatt.cn（文件服务） |
-| oci-arm  | ubuntu@170.9.53.38      | 承载官网（www.codewatt.cn、codewatt.cn）、paseo relay 服务（paseo.codewatt.cn、relay.codewatt.cn）、期权引擎服务（opt.codewatt.cn） |
+| oci-arm  | ubuntu@170.9.53.38      | 承载官网（www.codewatt.cn、codewatt.cn）、期权引擎服务（opt.codewatt.cn）；2026-11-08 起不可达，paseo 已迁至 frank-eu |
 | oci-amd  | ubuntu@163.192.16.235   | 承载 x.codewatt.cn、frps.codewatt.cn |
 
 > IP 通过域名解析得到。
+
+## 其他云主机
+
+均为 frank 账号仅公钥登录（本机、隔壁机器已授权）、免密 sudo、禁止 root 登录；详情见设备台账 `cloud`。
+
+| 别名     | 地址                  | 备注                                                         |
+| -------- | --------------------- | ------------------------------------------------------------ |
+| frank-jd | frank@117.72.13.138   | 京东云，x86_64 Ubuntu 24.04                                  |
+| frank-eu | frank@91.90.83.210    | Contabo 欧洲，x86_64 Ubuntu 24.04；接替 oci-arm 承载 paseo daemon + web（paseo.codewatt.cn）与 paseo relay（relay.codewatt.cn） |
 
 ## 域名
 
@@ -111,8 +120,8 @@ VBoxManage controlvm <vm> resume
 | files.codewatt.cn | oci-base  | 文件服务                        |
 | codewatt.cn      | oci-arm    | 官网                            |
 | www.codewatt.cn  | oci-arm    | 官网                            |
-| paseo.codewatt.cn | oci-arm   | paseo relay 服务                |
-| relay.codewatt.cn | oci-arm   | paseo relay 服务                |
+| paseo.codewatt.cn | frank-eu  | paseo daemon + web UI（2026-11-08 迁出 oci-arm）|
+| relay.codewatt.cn | frank-eu  | paseo relay 服务（2026-11-08 迁出 oci-arm）|
 | opt.codewatt.cn  | oci-arm    | 期权引擎服务                    |
 | x.codewatt.cn    | oci-amd    |                                 |
 | frps.codewatt.cn | oci-amd    |                                 |
