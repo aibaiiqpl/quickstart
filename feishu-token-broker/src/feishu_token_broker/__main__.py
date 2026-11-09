@@ -1,6 +1,6 @@
 """
 命令行入口：
-  serve      启动 Broker HTTP 服务（systemd 调用）
+  serve      启动 Broker HTTP 服务与后台保活线程（systemd 调用）
   authorize  生成一次性飞书授权链接（管理员在服务器上以 feishu 用户执行）
 两者读取同一个 env 文件，保证配置来源唯一。
 """
@@ -10,10 +10,19 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+import threading
 from pathlib import Path
 
-from .config import DEFAULT_ENV_FILE, PENDING_OAUTH_TTL_SECONDS, ConfigError, Settings, load_settings
+from .config import (
+    DEFAULT_ENV_FILE,
+    KEEPALIVE_INTERVAL_SECONDS,
+    PENDING_OAUTH_TTL_SECONDS,
+    ConfigError,
+    Settings,
+    load_settings,
+)
 from .feishu_client import FeishuClient
+from .keepalive import run_keepalive
 from .log import setup_logging
 from .server import build_server
 from .service import TokenService
@@ -27,8 +36,19 @@ def _build_service(settings: Settings) -> TokenService:
 
 
 def _serve(settings: Settings) -> None:
-    server = build_server(_build_service(settings), settings.api_key, settings.listen_port)
-    log.info("broker listening", extra={"ctx": {"address": "%s:%d" % server.server_address[:2]}})
+    service = _build_service(settings)
+    server = build_server(service, settings.api_key, settings.listen_port)
+    # daemon 线程随主进程退出，systemd stop 时无需额外清理
+    threading.Thread(
+        target=run_keepalive,
+        args=(service, threading.Event(), KEEPALIVE_INTERVAL_SECONDS),
+        name="keepalive",
+        daemon=True,
+    ).start()
+    log.info(
+        "broker listening",
+        extra={"ctx": {"address": "%s:%d" % server.server_address[:2], "keepalive_s": KEEPALIVE_INTERVAL_SECONDS}},
+    )
     server.serve_forever()
 
 

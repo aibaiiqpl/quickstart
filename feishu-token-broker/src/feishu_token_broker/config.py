@@ -20,6 +20,9 @@ FEISHU_HTTP_TIMEOUT_SECONDS = 30
 
 # access_token 剩余有效期低于该值就刷新：保证客户端拿到的 token 至少还能用这么久
 REFRESH_MARGIN_SECONDS = 300
+# 保活检查间隔：飞书 refresh_token 仅 7 天有效，无人调用时靠定期刷新持续轮换；
+# access_token 约 2 小时有效，每小时检查一次即可保证每 2~3 小时轮换一次
+KEEPALIVE_INTERVAL_SECONDS = 3600
 # 管理员发起授权后，必须在该时间内完成浏览器授权，过期的 state 一律拒绝
 PENDING_OAUTH_TTL_SECONDS = 600
 # 拒绝占位符或弱口令被当成 API key 使用
