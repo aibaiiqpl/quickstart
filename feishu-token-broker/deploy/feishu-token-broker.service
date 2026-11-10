@@ -1,0 +1,33 @@
+[Unit]
+Description=Feishu Token Broker (hands out short-lived Feishu user_access_token)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=feishu
+Group=feishu
+WorkingDirectory=/opt/feishu/app
+ExecStart=/opt/feishu/app/.venv/bin/python -m feishu_token_broker serve --env-file /opt/feishu/feishu.env
+Environment=PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+Restart=on-failure
+RestartSec=3
+UMask=0077
+
+# 沙箱：代码与配置只读，唯一可写的是存放 refresh_token 的 state 目录
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/feishu/state
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

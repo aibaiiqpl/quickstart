@@ -1,5 +1,7 @@
 # 机器清单
 
+> 本文只记开发与云端基础设施，不含密码。项目现场设备、部署目标的架构/glibc/服务清单，以及所有登录密码，在本机设备台账 `~/.local/share/machines/<project>.json`，密码只在 `~/.secrets/machines.env`，SSH 别名由台账生成到 `~/.ssh/config.d/machines.conf`（`$device-access` Skill）。
+
 ## 跳板机
 
 ```bash
@@ -12,14 +14,77 @@ ssh -p 6041 wudun@aiwatt.net
 
 ## 内网开发机
 
-本仓库在两台开发机上都有 checkout，"本机/隔壁机器"随所在机器而变，这里一律用 hostname 标注。
-
-| hostname  | 地址                   | 备注                    |
-| --------- | ---------------------- | ----------------------- |
-| frank-dev | frank@192.168.110.239  | frank 的主开发机；常驻 pptp vpn10 |
-| dhfan-dev | aiwatt@192.168.1.190   | 用 1.190 这个稳定地址（另有 192.168.110.200；旧记录 192.168.110.198 不可达）；常驻 pptp vpn15 |
+本仓库在两台开发机上都有 checkout，“本机/隔壁机器”随所在机器而变，请以 hostname 确认目标。
 
 > 现场设备、跳板、tailnet 登录方式不入本仓库（公开仓库），用 `~/.ssh/config.d/machines.conf` 里的别名登录，台账在 `~/.local/share/machines/`，见 skill `device-ledger`。
+
+内网开发机均为 VirtualBox 虚拟机，宿主机见下方「虚拟化宿主机」。`192.168.110.*` 多为 DHCP 分配、**会漂移**，下表地址为 2026-08-03 实测值。
+
+| 别名/命令 | 地址                   | 宿主机上的虚机名 | 备注                    |
+| --------- | ---------------------- | ---------------- | ----------------------- |
+| xmy-dev   | aiwatt@192.168.110.200 | `xmy-dev`        | hostname 为 dhfan-dev（SSH 别名 `dhfan-dev`），网卡 enp0s3；110.200 由 DHCP 得来，同网卡另有 `192.168.1.190/24` |
+| frank-dev | **frank@192.168.1.239**（固定，优先用） | `frank-test`     | hostname 为 frank-dev。2026-08-03 加挂固定地址，见下方「192.168.1.0/24 网段」；同网卡仍保留 `192.168.110.239/24`（同为 netplan 静态，非 DHCP） |
+
+### 192.168.1.0/24 网段
+
+与 `192.168.110.0/24` 在**同一二层**共存的另一个网段，**没有网关**（默认路由仍走 `192.168.110.1`），所以在这个网段上只配地址、不配路由和 DNS。
+
+frank-dev 的固定地址就挂在这里，配置写在 `/etc/netplan/50-cloud-init.yaml`（Ubuntu 24.04 + systemd-networkd；该机 `cloud-init status` 为 `disabled`，不会重写 netplan，所以直接改这个文件即可）：
+
+```yaml
+network:
+  version: 2
+  ethernets:
+    enp0s3:
+      dhcp4: false
+      addresses:
+        - 192.168.110.239/24   # 原有地址，不能动
+        - 192.168.1.239/24     # 加挂的固定地址
+```
+
+> 加挂第二地址是**纯追加**操作：改 netplan 时必须把原有地址一起列出（netplan 对同一网卡的 `addresses` 是**整键覆盖**，高编号文件会替换而不是追加，漏写原地址会直接断网）。改完先 `netplan generate` 校验、`ip addr add` 运行时验证，再 `netplan apply`。
+
+## 内网物理机
+
+不挂在 VirtualBox 宿主机上的内网机器，地址同样由 DHCP 分配、**会漂移**。
+
+| 别名      | 地址                    | 备注                    |
+| --------- | ----------------------- | ----------------------- |
+| frank-mac | frankfan@192.168.110.26 | Frank 的 MacBook Air（hostname `FrankdeMacBook-Air.local`，Apple Silicon）。**只能密码登录**，未配公钥，密码不入库（见本机 `~/.secrets/machines.env`，`ssh frank-mac`） |
+
+关于这台机器上的 codex / paseo，有几处与 Linux 开发机不同：
+
+- **paseo 是桌面 App**（`/Applications/Paseo.app`，进程为 Paseo Supervisor → Paseo Daemon），**没有 systemd/launchd 服务**，不能 `systemctl restart`，只能手动重启 App。
+- **`codex` 不在 PATH**。App 自带的 CLI 在 `/Applications/ChatGPT.app/Contents/Resources/codex`；给 paseo 跑 app-server 的是另一份 nvm 装的 `@openai/codex`。
+- 站点 VPN 走 macOS 专用的一套（`/usr/local/libexec/aiwatt-pptp/pptp-wrapper.sh` + `/usr/local/bin/pptp-codex`），由 codex 托管；`pppd` 会 reparent 到 launchd，所以杀 codex 进程不会断掉隧道。
+
+## 虚拟化宿主机
+
+| 别名     | 地址               | 备注                                          |
+| -------- | ------------------ | --------------------------------------------- |
+| vbox-host | wudun@192.168.110.3 | VirtualBox 宿主机，承载 18 台开发虚机；根分区 901G，`~/VirtualBox VMs` 常年逼近写满 |
+
+### 内网机器 ping 不通时的排查顺序
+
+不要直接判定「机器关机了」。宿主机磁盘写满时，VirtualBox 会把虚机自动切到 `paused` 以防数据损坏，此时虚机 CPU 冻结、网卡不响应，表现与关机完全一致（ping 不通 + ARP FAILED + SSH 连接超时）。
+
+```bash
+ssh wudun@192.168.110.3
+VBoxManage list vms                                          # 虚机清单
+VBoxManage showvminfo <vm> --machinereadable | grep VMState  # paused?
+df -h /                                                      # 宿主机磁盘
+tail -30 ~/VirtualBox\ VMs/<vm>/Logs/VBox.log | grep -i disk_full
+```
+
+确认是 paused 后，**必须先在宿主机腾出空间再恢复**，否则虚机跑起来立刻会被再次挂起：
+
+```bash
+VBoxManage controlvm <vm> resume
+```
+
+恢复后进虚机确认文件系统没被踢成只读：`mount | grep " / "`（应为 `rw`）。
+
+> 找不到虚机新地址时，用 `known_hosts` 里的主机密钥反查：主机密钥存在虚机内部、跟着机器走，换 IP 也不变。`ssh-keygen -F <旧IP>` 取出密钥，再用 `ssh-keyscan` 扫全网段比对即可定位。
 
 ## 其他
 
@@ -34,24 +99,34 @@ ssh -p 6041 wudun@aiwatt.net
 
 | 别名     | 地址                    | 备注                                                         |
 | -------- | ----------------------- | ------------------------------------------------------------ |
-| oci-base | ubuntu@159.54.175.64    | 承载官网（www.codewatt.cn、codewatt.cn，2026-07-16 从 oci-arm 迁入）、base.codewatt.cn（基站储能模拟服务）、files.codewatt.cn（文件服务）、ft.codewatt.cn（飞书 token broker） |
-| oci-arm  | ubuntu@170.9.53.38      | 承载 paseo relay 服务（paseo.codewatt.cn、relay.codewatt.cn）、期权引擎服务（opt.codewatt.cn）、PostgreSQL；**\*.codewatt.cn 证书签发机** |
-| oci-amd  | ubuntu@163.192.16.235   | 承载 x.codewatt.cn、frps.codewatt.cn、ems.codewatt.cn、ctrl.codewatt.cn |
+| oci-base | ubuntu@159.54.175.64    | 承载 base.codewatt.cn（基站储能模拟服务）、files.codewatt.cn（文件服务）；2026-11-08 起不可达（ping/22/443 均超时），飞书 Token Broker 已重建于 frank-eu |
+| oci-arm  | ubuntu@170.9.53.38      | 承载官网（www.codewatt.cn、codewatt.cn）、期权引擎服务（opt.codewatt.cn）；2026-11-08 起不可达，paseo 已迁至 frank-eu |
+| oci-amd  | ubuntu@163.192.16.235   | 承载 x.codewatt.cn、frps.codewatt.cn |
 
 > IP 通过域名解析得到。
+
+## 其他云主机
+
+均为 frank 账号仅公钥登录（本机、隔壁机器已授权）、免密 sudo、禁止 root 登录；详情见设备台账 `cloud`。
+
+| 别名     | 地址                  | 备注                                                         |
+| -------- | --------------------- | ------------------------------------------------------------ |
+| frank-jd | frank@117.72.13.138   | 京东云，x86_64 Ubuntu 24.04                                  |
+| frank-eu | frank@91.90.83.210    | Contabo 欧洲，x86_64 Ubuntu 24.04；接替 oci-arm 承载 paseo daemon + web（paseo.codewatt.cn）与 paseo relay（relay.codewatt.cn）；飞书 Token Broker（ft.codewatt.cn，`/opt/feishu`，源码 `feishu-token-broker/`） |
 
 ## 域名
 
 | 域名             | 指向       | 备注                            |
 | ---------------- | ---------- | ------------------------------- |
 | eco-watt.net     | AWS 生产机 | smart-energy 云服务生产域名     |
+| file.eco-watt.net | AWS 测试机（经 ELB） | 文件服务，nginx root `/home/files`；`tmp/<类别>/` 为临时部署中转，`ota/` 为正式 OTA |
 | base.codewatt.cn | oci-base   | 基站储能模拟服务                |
 | files.codewatt.cn | oci-base  | 文件服务                        |
-| codewatt.cn      | oci-base   | 官网                            |
-| www.codewatt.cn  | oci-base   | 官网                            |
-| ft.codewatt.cn   | oci-base   | 飞书 token broker               |
-| paseo.codewatt.cn | oci-arm   | paseo relay 服务                |
-| relay.codewatt.cn | oci-arm   | paseo relay 服务                |
+| codewatt.cn      | oci-arm    | 官网                            |
+| www.codewatt.cn  | oci-arm    | 官网                            |
+| paseo.codewatt.cn | frank-eu  | paseo daemon + web UI（2026-11-08 迁出 oci-arm）|
+| relay.codewatt.cn | frank-eu  | paseo relay 服务（2026-11-08 迁出 oci-arm）|
+| ft.codewatt.cn   | frank-eu   | 飞书 Token Broker（2026-11-09 自 oci-base 重建）|
 | opt.codewatt.cn  | oci-arm    | 期权引擎服务                    |
 | x.codewatt.cn    | oci-amd    |                                 |
 | frps.codewatt.cn | oci-amd    |                                 |
